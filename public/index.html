@@ -1,0 +1,84 @@
+<!-- public/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Blog CRUD</title>
+    <style>
+        body { font-family: Arial; max-width: 800px; margin: 20px auto; padding: 0 20px; }
+        input, textarea, button { width: 100%; padding: 8px; margin: 5px 0; }
+        button { background: #4CAF50; color: white; border: none; cursor: pointer; }
+        button:hover { opacity: 0.8; }
+        .post { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+<h1>Simple Blog</h1>
+
+<h2>Create Post</h2>
+<input id="title" placeholder="Title" />
+<textarea id="body" placeholder="Body"></textarea>
+<input id="author" placeholder="Author (optional)" />
+<button onclick="createPost()">Create Post</button>
+
+<h2>All Posts</h2>
+<button onclick="loadPosts()">Load Posts</button>
+<div id="posts"></div>
+
+<script>
+    const API = 'http://localhost:3000';
+
+    async function createPost() {
+        const title = document.getElementById('title').value;
+        const body = document.getElementById('body').value;
+        const author = document.getElementById('author').value || undefined;
+        const res = await fetch(`${API}/blogs`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, body, author })
+        });
+        if (res.ok) {
+            alert('Post created!');
+            loadPosts();
+        } else {
+            alert('Error: ' + (await res.json()).error);
+        }
+    }
+
+    async function loadPosts() {
+        const res = await fetch(`${API}/blogs`);
+        const posts = await res.json();
+        const container = document.getElementById('posts');
+        container.innerHTML = posts.map(p => `
+        <div class="post">
+          <h3>${p.title}</h3>
+          <p>${p.body}</p>
+          <small>By ${p.author} | ${new Date(p.createdAt).toLocaleString()}</small><br>
+          <button onclick="editPost('${p._id}', prompt('New title:', '${p.title}'), prompt('New body:', '${p.body}'))">Edit</button>
+          <button onclick="deletePost('${p._id}')">Delete</button>
+        </div>
+      `).join('');
+    }
+
+    async function editPost(id, title, body) {
+        if (!title || !body) return;
+        const res = await fetch(`${API}/blogs/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, body })
+        });
+        if (res.ok) loadPosts();
+    }
+
+    async function deletePost(id) {
+        if (confirm('Delete this post?')) {
+            await fetch(`${API}/blogs/${id}`, { method: 'DELETE' });
+            loadPosts();
+        }
+    }
+
+    loadPosts();
+</script>
+</body>
+</html>
